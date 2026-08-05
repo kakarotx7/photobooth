@@ -866,13 +866,14 @@
             const frameStyle = document.getElementById('frameSelect').value;
             const customText = document.getElementById('stampText').value || 'Us across the miles ❤️';
             
-            const padding = 24;
-            const headerHeight = 20;
-            const footerHeight = 90;
-            const frameGap = 16;
+            const padding = 16;
+            const headerHeight = 15;
+            const footerHeight = 70;
+            const frameGap = 12;
             
-            const photoW = 600;
-            const photoH = 450;
+            // Scaled dimensions to prevent iOS memory limits
+            const photoW = 400;
+            const photoH = 300;
 
             let cols = 1, rows = 3;
             if (currentLayout === 'grid4') { cols = 2; rows = 2; }
@@ -901,11 +902,11 @@
 
             // Cute Hearts Pattern if selected
             if (frameStyle === 'hearts') {
-                ctx.font = '20px serif';
-                for (let x = 10; x < canvasW; x += 40) {
-                    for (let y = 20; y < canvasH; y += 40) {
+                ctx.font = '16px serif';
+                for (let x = 10; x < canvasW; x += 30) {
+                    for (let y = 15; y < canvasH; y += 30) {
                         ctx.fillText('✨', x, y);
-                        ctx.fillText('💗', x + 20, y + 20);
+                        ctx.fillText('💗', x + 15, y + 15);
                     }
                 }
             }
@@ -932,37 +933,76 @@
             ctx.textAlign = 'center';
 
             // Custom Text
-            ctx.font = 'bold 28px -apple-system, sans-serif';
-            ctx.fillText(customText, canvasW / 2, canvasH - footerHeight + 35);
+            ctx.font = 'bold 22px -apple-system, sans-serif';
+            ctx.fillText(customText, canvasW / 2, canvasH - footerHeight + 28);
 
             // Date Stamp
             const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            ctx.font = '500 18px -apple-system, sans-serif';
+            ctx.font = '500 14px -apple-system, sans-serif';
             ctx.fillStyle = (frameStyle === 'dark') ? '#a1a1aa' : '#718096';
-            ctx.fillText(today + ' • Distance Photo Booth', canvasW / 2, canvasH - footerHeight + 65);
+            ctx.fillText(today + ' • Distance Photo Booth', canvasW / 2, canvasH - footerHeight + 50);
 
-            // Show Preview Modal
+            // 4. Trigger Confetti & Open Modal
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+
             previewModal.classList.add('active');
-
-            // Trigger Confetti Celebration
-            confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
         }
 
-        function downloadPhoto() {
-            const dataURL = photoCanvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.download = `Couple_Photo_Booth_${Date.now()}.png`;
-            link.href = dataURL;
-            link.click();
+        // --- Export / Modal Functions ---
+        async function downloadPhoto() {
+            const fileName = `photo-booth-${Date.now()}.png`;
+
+            photoCanvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert('Could not generate image. Please try retaking.');
+                    return;
+                }
+
+                const file = new File([blob], fileName, { type: 'image/png' });
+
+                // Try Web Share API (Works on Mobile / iOS Safari / Android Chrome to save to Photos/Gallery)
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Photo Booth Strip',
+                            text: 'Saved from Distance Photo Booth!'
+                        });
+                        return;
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.warn('Share API failed, falling back to blob download', err);
+                        } else {
+                            return; // User cancelled share
+                        }
+                    }
+                }
+
+                // Fallback for desktop browsers / browsers without Web Share API
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }, 'image/png');
         }
 
         function closeModal() {
             previewModal.classList.remove('active');
         }
 
-        // --- App Initialization ---
-        window.addEventListener('DOMContentLoaded', () => {
-            startCamera();
+        // --- Initialization on Load ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            await startCamera();
             initPeer();
         });
     </script>
