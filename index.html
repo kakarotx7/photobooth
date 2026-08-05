@@ -945,50 +945,62 @@
 
                 ctx.drawImage(frameCanvas, x, y, photoW, photoH);
 
-                // Thin inner border around each photo
-                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                // Subtle frame border around each photo
+                ctx.strokeStyle = frameStyle === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
                 ctx.lineWidth = 4;
                 ctx.strokeRect(x, y, photoW, photoH);
             });
 
-            // 3. Draw Footer Text & Timestamp
-            const textColor = (frameStyle === 'dark') ? '#ffffff' : '#2d3748';
-            ctx.fillStyle = textColor;
+            // 3. Draw Footer Text & Date Stamp
+            const footerY = canvasH - (footerHeight / 2) - 10;
             ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-            // Custom Text
-            ctx.font = 'bold 44px -apple-system, sans-serif';
-            ctx.fillText(customText, canvasW / 2, canvasH - footerHeight + 56);
+            // Text color based on theme
+            if (frameStyle === 'dark') {
+                ctx.fillStyle = '#f8f9fa';
+            } else if (frameStyle === 'pink' || frameStyle === 'hearts') {
+                ctx.fillStyle = '#ff4b72';
+            } else {
+                ctx.fillStyle = '#212529';
+            }
+
+            // Custom Stamp Text
+            ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(customText, canvasW / 2, footerY - 15);
 
             // Date Stamp
-            const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            ctx.font = '500 28px -apple-system, sans-serif';
-            ctx.fillStyle = (frameStyle === 'dark') ? '#a1a1aa' : '#718096';
-            ctx.fillText(today, canvasW / 2, canvasH - footerHeight + 104);
+            const now = new Date();
+            const dateStr = now.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.globalAlpha = 0.7;
+            ctx.fillText(dateStr, canvasW / 2, footerY + 25);
+            ctx.globalAlpha = 1.0;
 
-            // Show Preview Modal & Trigger Confetti
+            // Show Modal and trigger celebration confetti
             previewModal.classList.add('active');
-            if (window.confetti) {
+            if (typeof confetti === 'function') {
                 confetti({
-                    particleCount: 80,
+                    particleCount: 100,
                     spread: 70,
                     origin: { y: 0.6 }
                 });
             }
         }
 
+        // --- Modal Actions ---
         function closeModal() {
             previewModal.classList.remove('active');
         }
 
         function downloadPhoto() {
             const link = document.createElement('a');
-            link.download = `photo-booth-${Date.now()}.png`;
+            link.download = `photo-strip-${Date.now()}.png`;
             link.href = photoCanvas.toDataURL('image/png');
             link.click();
         }
 
-        // --- Initialize App ---
+        // --- Application Lifecycle Initialization ---
         window.addEventListener('DOMContentLoaded', () => {
             startCamera();
             initPeer();
